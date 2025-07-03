@@ -1,13 +1,14 @@
 package br.com.alura.screenmatchspring.main;
 
+import br.com.alura.screenmatchspring.model.Episode;
+import br.com.alura.screenmatchspring.model.EpisodesData;
 import br.com.alura.screenmatchspring.model.SeasonData;
 import br.com.alura.screenmatchspring.model.SeriesData;
 import br.com.alura.screenmatchspring.service.ApiService;
 import br.com.alura.screenmatchspring.service.DataConverter;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Main {
     private ApiService apiService = new ApiService();
@@ -30,11 +31,31 @@ public class Main {
 
         List<SeasonData> seasons = new ArrayList<>();
 
-        for(int i = 0; i < seriesData.totalSeasons(); i++){
+        for(int i = 1; i < seriesData.totalSeasons(); i++){
             json = apiService.getData(URL + serieName.replace(" ", "+") + "&season=" + i + API_KEY);
             SeasonData seasonData = converter.getData(json, SeasonData.class);
             seasons.add(seasonData);
         }
         seasons.forEach(System.out::println);
+        seasons.forEach(t -> t.listEpisodes().forEach(e -> System.out.println(e.title())));
+
+        List<EpisodesData> episodesData = seasons
+                .stream()
+                .flatMap(s -> s.listEpisodes().stream())
+                .collect(Collectors.toList());
+
+        System.out.println();
+        System.out.println("Top 5 Episódios!");
+        episodesData.stream()
+                .filter(e -> !e.imdbRating().equalsIgnoreCase("N/A"))
+                .sorted(Comparator.comparing(EpisodesData::imdbRating).reversed())
+                .limit(5)
+                .forEach(System.out::println);
+
+        List<Episode> episodes = seasons
+                .stream()
+                .flatMap(s -> s.listEpisodes().stream()
+                        .map(d -> new Episode(s.season(), d))
+                ).collect(Collectors.toList());
     }
 }
